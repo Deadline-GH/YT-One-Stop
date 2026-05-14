@@ -1,0 +1,39 @@
+# MarketPulse V4 — Docker Compose Override for world-01 VPS
+# Applied on top of upstream Vibe-Trading docker-compose.yml.
+# This restricts the API to loopback only; access reaches it via Tailscale.
+
+services:
+  vibe-trading:
+    # Bind strictly to loopback — Tailscale handles external access.
+    ports:
+      - "127.0.0.1:8899:8899"
+
+    # Trust the Docker loopback so the app doesn't reject internal calls.
+    environment:
+      - VIBE_TRADING_TRUST_DOCKER_LOOPBACK=1
+
+    # Named volumes persist run history and sessions across container restarts.
+    volumes:
+      - vibe-runs:/app/agent/runs
+      - vibe-sessions:/app/agent/sessions
+
+    restart: unless-stopped
+
+    # Health check — surface container status in `docker ps`.
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8899/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+    # Logging — cap size to avoid filling the VPS disk.
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  vibe-runs:
+  vibe-sessions:
