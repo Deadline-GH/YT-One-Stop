@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
 # MarketPulse V4 — Phase 1: Vibe-Trading Baseline Setup
 # Run this once on world-01 (Ubuntu VPS) as a non-root user with Docker access.
-# Usage: bash setup_vps.sh [--ollama-host <tailscale-ip>] [--model <model-name>]
+# Usage: bash setup_vps.sh --llm-host <tailscale-ip>
+#
+# Windows host must be running:
+#   llama-server.exe --host 0.0.0.0 --port 8090 --model <your.gguf> ...
 set -euo pipefail
 
 REPO_URL="https://github.com/HKUDS/Vibe-Trading.git"
 INSTALL_DIR="${HOME}/vibe-trading"
-OLLAMA_HOST="${OLLAMA_HOST:-}"   # override via --ollama-host or env var
-MODEL_NAME="${MODEL_NAME:-llama3.2}"
+LLM_HOST="${LLM_HOST:-}"   # override via --llm-host or env var
 
 # ── Parse args ──────────────────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --ollama-host) OLLAMA_HOST="$2"; shift 2 ;;
-    --model)       MODEL_NAME="$2";  shift 2 ;;
+    --llm-host) LLM_HOST="$2"; shift 2 ;;
     *) echo "Unknown arg: $1"; exit 1 ;;
   esac
 done
@@ -24,11 +25,11 @@ command -v git    >/dev/null 2>&1 || { echo "ERROR: git not found"; exit 1; }
 command -v docker >/dev/null 2>&1 || { echo "ERROR: docker not found"; exit 1; }
 docker compose version >/dev/null 2>&1 || { echo "ERROR: docker compose (v2) not found"; exit 1; }
 
-if [[ -z "$OLLAMA_HOST" ]]; then
+if [[ -z "$LLM_HOST" ]]; then
   echo ""
-  echo "WARN: --ollama-host not provided."
-  echo "      The .env will use placeholder <OLLAMA_TAILSCALE_IP>."
-  echo "      Edit marketpulse_v4/env.template or set OLLAMA_HOST= before re-running."
+  echo "WARN: --llm-host not provided."
+  echo "      The .env will use placeholder <LLM_TAILSCALE_IP>."
+  echo "      Edit marketpulse_v4/env.template or set LLM_HOST= before re-running."
   echo ""
 fi
 
@@ -54,11 +55,10 @@ fi
 
 cp "$ENV_TEMPLATE" "$ENV_DEST"
 
-# Substitute OLLAMA_HOST if provided
-if [[ -n "$OLLAMA_HOST" ]]; then
-  sed -i "s|<OLLAMA_TAILSCALE_IP>|${OLLAMA_HOST}|g" "$ENV_DEST"
+# Substitute LLM_HOST if provided
+if [[ -n "$LLM_HOST" ]]; then
+  sed -i "s|<LLM_TAILSCALE_IP>|${LLM_HOST}|g" "$ENV_DEST"
 fi
-sed -i "s|<MODEL_NAME>|${MODEL_NAME}|g" "$ENV_DEST"
 
 echo "    Written to ${ENV_DEST}"
 

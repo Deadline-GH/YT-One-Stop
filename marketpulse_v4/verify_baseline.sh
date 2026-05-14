@@ -29,13 +29,13 @@ fi
 echo "2. .env configuration"
 ENV_FILE="${INSTALL_DIR}/agent/.env"
 if [[ -f "$ENV_FILE" ]]; then
-  if grep -q "<OLLAMA_TAILSCALE_IP>" "$ENV_FILE"; then
-    fail ".env still has placeholder <OLLAMA_TAILSCALE_IP> — edit it or re-run setup_vps.sh --ollama-host <IP>"
-  elif grep -q "^OLLAMA_BASE_URL=" "$ENV_FILE"; then
-    OLLAMA_URL=$(grep "^OLLAMA_BASE_URL=" "$ENV_FILE" | cut -d= -f2-)
-    ok "OLLAMA_BASE_URL = ${OLLAMA_URL}"
+  if grep -q "<LLM_TAILSCALE_IP>" "$ENV_FILE"; then
+    fail ".env still has placeholder <LLM_TAILSCALE_IP> — re-run setup_vps.sh --llm-host <tailscale-ip>"
+  elif grep -q "^OPENAI_BASE_URL=" "$ENV_FILE"; then
+    LLM_URL=$(grep "^OPENAI_BASE_URL=" "$ENV_FILE" | cut -d= -f2-)
+    ok "OPENAI_BASE_URL = ${LLM_URL}"
   else
-    fail "OLLAMA_BASE_URL not set in .env"
+    fail "OPENAI_BASE_URL not set in .env"
   fi
 else
   fail ".env not found at ${ENV_FILE}"
@@ -60,19 +60,20 @@ else
   fail "GET /health → ${HTTP_CODE} (expected 200)"
 fi
 
-# 5. Ollama reachability from VPS
-echo "5. Ollama reachability"
-if [[ -f "$ENV_FILE" ]] && ! grep -q "<OLLAMA_TAILSCALE_IP>" "$ENV_FILE"; then
-  OLLAMA_BASE=$(grep "^OLLAMA_BASE_URL=" "$ENV_FILE" | cut -d= -f2-)
-  HTTP_OLLAMA=$(curl -so /dev/null -w "%{http_code}" "${OLLAMA_BASE}/api/tags" \
-                --connect-timeout 5 2>/dev/null || echo "000")
-  if [[ "$HTTP_OLLAMA" == "200" ]]; then
-    ok "Ollama API reachable at ${OLLAMA_BASE}"
+# 5. llama-cpp-server reachability from VPS
+echo "5. llama-cpp-server reachability"
+if [[ -f "$ENV_FILE" ]] && ! grep -q "<LLM_TAILSCALE_IP>" "$ENV_FILE"; then
+  LLM_BASE=$(grep "^OPENAI_BASE_URL=" "$ENV_FILE" | cut -d= -f2-)
+  # /v1/models is the standard OpenAI-compatible health endpoint
+  HTTP_LLM=$(curl -so /dev/null -w "%{http_code}" "${LLM_BASE}/models" \
+             --connect-timeout 5 2>/dev/null || echo "000")
+  if [[ "$HTTP_LLM" == "200" ]]; then
+    ok "llama-cpp-server reachable at ${LLM_BASE}"
   else
-    fail "Ollama API not reachable at ${OLLAMA_BASE} (HTTP ${HTTP_OLLAMA}) — check Tailscale and that Ollama is running on the Windows host"
+    fail "llama-cpp-server not reachable at ${LLM_BASE} (HTTP ${HTTP_LLM}) — check Tailscale and that llama-server.exe is running on Windows host (port 8090)"
   fi
 else
-  echo "  [SKIP] Ollama check skipped (placeholder IP still in .env)"
+  echo "  [SKIP] llama-cpp check skipped (placeholder IP still in .env)"
 fi
 
 # 6. Quick smoke-test: agent run via API
