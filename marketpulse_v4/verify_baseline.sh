@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # MarketPulse V4 — Baseline Verification
 # Run after setup_vps.sh to confirm Vibe-Trading is healthy and reachable.
-set -euo pipefail
+set -uo pipefail
 
 INSTALL_DIR="${HOME}/vibe-trading"
 API_URL="http://127.0.0.1:8899"
